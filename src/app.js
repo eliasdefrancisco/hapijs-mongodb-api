@@ -1,4 +1,5 @@
 const Hapi = require('@hapi/hapi')
+const Joi = require('@hapi/joi')
 require('./database')
 const Task = require('./models/Task')
 
@@ -11,6 +12,19 @@ const init = async () => {
     server.route({
         method: 'POST',
         path: '/tasks',
+        options: {
+            validate: {
+                payload: Joi.object({
+                    name: Joi.string().min(5).required(),
+                    description: Joi.string()
+                }),
+                failAction: (request, h, error) => {
+                    return error.isJoi
+                        ? h.response(error.details[0]).takeover()
+                        : h.response(error).takeover()  
+                }
+            }
+        },
         handler: async (request, h) => {
             const task = new Task(request.payload)
             const taskSaved = await task.save()
@@ -47,6 +61,19 @@ const init = async () => {
     server.route({
         method: 'PUT',
         path: '/tasks/{id}',
+        options: {
+            validate: {
+                payload: Joi.object({
+                    name: Joi.string().min(5).optional(),
+                    description: Joi.string().optional()
+                }),
+                failAction: (request, h, error) => {
+                    return error.isJoi
+                        ? h.response(error.details[0]).takeover()
+                        : h.response(error).takeover()  
+                }
+            }
+        },
         handler: async (request, h) => {
             try {
                 const updatedTask = await Task.findByIdAndUpdate(request.params.id, request.payload, {
